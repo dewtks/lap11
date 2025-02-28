@@ -1,0 +1,6 @@
+version = 1
+analyzers = ["html", "js"]
+
+[files]
+include = ["**/*.html", "**/*.js"]
+exclude = ["**/*.css", "**/*.json", "**/*.md", "**/*.yml", "**/*.xml"]
