@@ -12,11 +12,23 @@
         }
         h1 {
             color: #333;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
-    <h1>🚀 Welcome to My Nginx Deployment!</h1>
+    <h1 id="welcome-message">🚀 Welcome to My Nginx Deployment!</h1>
     <p>This page is served using an Nginx container deployed on AWS.</p>
+
+    <script>
+        // Selecting the h1 element
+        const welcomeMessage = document.getElementById('welcome-message');
+
+        // Adding an event listener to change the text when clicked
+        welcomeMessage.addEventListener('click', () => {
+            welcomeMessage.textContent = '🎉 You clicked the welcome message!';
+            welcomeMessage.style.color = '#007BFF';  // Change text color
+        });
+    </script>
 </body>
 </html>
