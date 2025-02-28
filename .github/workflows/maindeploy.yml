@@ -1,4 +1,4 @@
-name: Deploy Nginx to Docker Hub and AWS
+name: Deploy frontend application
 
 on:
   push:
@@ -6,46 +6,59 @@ on:
       - main
 
 jobs:
-  deploy:
+  docker:
     runs-on: ubuntu-latest
-
+    env:
+      DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
+      HOST_SERVER: ${{ secrets.HOST_SERVER }}
+      HOST_USER_NAME: ${{ secrets.HOST_USER_NAME }}
+      HOST_SSH_PRIVATE_KEY: ${{ secrets.HOST_SSH_PRIVATE_KEY }}
+    
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Login to Docker Hub
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ env.DOCKER_HUB_USERNAME }}
+          password: ${{ env.DOCKER_HUB_TOKEN }}
 
-      - name: Build and Push Docker Image
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: your-dockerhub-username/nginx-deploy:latest
+          tags: dewtks/234-deploylab-frontend:latest
 
-      - name: Copy docker-compose.yml via SCP
+      - name: Copy docker-compose file to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.AWS_HOST }}
-          username: ${{ secrets.AWS_USERNAME }}
-          key: ${{ secrets.AWS_SSH_KEY }}
+          host: ${{ env.HOST_SERVER }}
+          username: ${{ env.HOST_USER_NAME }}
+          key: ${{ env.HOST_SSH_PRIVATE_KEY }}
           port: 22
           source: "docker-compose.yml"
-          target: "/home/ubuntu/"
+          target: "/home/ubuntu/frontend"
 
-      - name: Deploy on AWS via SSH
+      - name: Deploy with Docker Compose
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host: ${{ secrets.AWS_HOST }}
-          username: ${{ secrets.AWS_USERNAME }}
-          key: ${{ secrets.AWS_SSH_KEY }}
+          host: ${{ env.HOST_SERVER }}
+          username: ${{ env.HOST_USER_NAME }}
+          key: ${{ env.HOST_SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd /home/ubuntu/
-            echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login --username ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
-            docker compose down
+            cd /home/ubuntu/frontend
+            echo ${{ env.DOCKER_HUB_TOKEN }} | docker login --username ${{ env.DOCKER_HUB_USERNAME }} --password-stdin
+            docker compose down || echo "No running containers"
             docker compose pull
-            docker compose up -d
+            docker compose up -d --remove-orphans
+            docker system prune -f  # Cleanup old containers & images
